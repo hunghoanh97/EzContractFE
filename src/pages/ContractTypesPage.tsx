@@ -157,7 +157,7 @@ export default function ContractTypesPage() {
             </div>
             <div className="p-4 space-y-3">
               <input className="border rounded px-3 py-2 w-full" placeholder="Tên" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} />
-              <input className="border rounded px-3 py-2 w-full" placeholder="Mã" value={form.code} onChange={e => setForm({ ...form, code: e.target.value })} />
+              
               <input className="border rounded px-3 py-2 w-full" placeholder="Mô tả" value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} />
               <select className="border rounded px-3 py-2 w-full" value={form.companyId} onChange={e => setForm({ ...form, companyId: e.target.value })}>
                 <option value="">Chọn công ty...</option>
