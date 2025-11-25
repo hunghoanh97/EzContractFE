@@ -7,6 +7,7 @@ const items = [
   { path: "/admin/roles", label: "Vai trò" },
   { path: "/contract-types", label: "Loại hợp đồng" },
   { path: "/contract-fields", label: "Trường hợp đồng" },
+  { path: "/contract-form-info", label: "Form thông tin trong mẫu" },
   { path: "/contract-templates", label: "Mẫu hợp đồng" },
   { path: "/create-contract", label: "Tạo hợp đồng" },
   { path: "/workflow", label: "Tiến độ workflow" },
