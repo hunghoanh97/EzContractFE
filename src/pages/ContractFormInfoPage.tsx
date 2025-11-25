@@ -24,6 +24,7 @@ export default function ContractFormInfoPage() {
   const [availableFields, setAvailableFields] = useState<CF[]>([]);
   const [fieldSearch, setFieldSearch] = useState("");
   const [selectedFields, setSelectedFields] = useState<CF[]>([]);
+  const [companies, setCompanies] = useState<Array<{ id: string; name: string }>>([]);
 
   useEffect(() => {
     const load = async () => {
@@ -31,6 +32,8 @@ export default function ContractFormInfoPage() {
       try {
         const data = await apiFetch("/api/contract-field-values");
         setItems(Array.isArray(data) ? data : []);
+        const comps = await apiFetch("/api/companies");
+        setCompanies(Array.isArray(comps) ? comps.map((c: any) => ({ id: c.id, name: c.name })) : []);
       } finally { setLoading(false); }
     };
     load();
@@ -172,7 +175,10 @@ export default function ContractFormInfoPage() {
                 <option value="ACTIVE">Hoạt động</option>
                 <option value="INACTIVE">Tạm dừng</option>
               </select>
-              <input className="border rounded px-3 py-2 w-full" placeholder="CompanyId" value={form.companyId} onChange={e => setForm({ ...form, companyId: e.target.value })} />
+              <select className="border rounded px-3 py-2 w-full" value={form.companyId} onChange={e => setForm({ ...form, companyId: e.target.value })}>
+                <option value="">Chọn công ty...</option>
+                {companies.map(c => (<option key={c.id} value={c.id}>{c.name}</option>))}
+              </select>
             </div>
             <div className="px-4 pb-2">
               <button className="px-3 py-2 rounded-md border" onClick={openDesign}>Thiết kế form</button>
