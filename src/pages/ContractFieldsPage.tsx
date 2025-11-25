@@ -3,7 +3,7 @@ import Toast from "@/components/Toast";
 import { apiFetch, API_BASE_URL } from "@/services/api";
 import { useEffect, useMemo, useState } from "react";
 
-type ContractField = { id: string; typeId?: string; name: string; code: string; dataType: string; isRequired: boolean; order: number; metaJson?: string };
+type ContractField = { id: string; typeId?: string; name: string; code: string; dataType: string; isRequired: boolean; order: number; metaJson?: string; status?: string };
 
 export default function ContractFieldsPage() {
   const [items, setItems] = useState<ContractField[]>([]);
@@ -68,7 +68,8 @@ export default function ContractFieldsPage() {
         dataType: form.dataType,
         isRequired: false,
         order: 0,
-        metaJson: JSON.stringify({ defaultValue: form.defaultValue, status: form.status })
+        status: form.status,
+        metaJson: JSON.stringify({ defaultValue: form.defaultValue })
       };
       if (isEdit && editId) {
         await apiFetch(`/api/contract-fields/${editId}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
@@ -144,7 +145,7 @@ export default function ContractFieldsPage() {
                     <td className="p-2">{it.name}</td>
                     <td className="p-2">{meta.defaultValue || "-"}</td>
                     <td className="p-2">{it.dataType}</td>
-                    <td className="p-2">{(meta.status || "ACTIVE") === "ACTIVE" ? "Hoạt động" : "Tạm dừng"}</td>
+                    <td className="p-2">{(it.status || "ACTIVE") === "ACTIVE" ? "Hoạt động" : "Tạm dừng"}</td>
                   </tr>
                 );
               })}
