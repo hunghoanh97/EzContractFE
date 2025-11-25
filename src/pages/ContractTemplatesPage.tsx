@@ -24,6 +24,10 @@ export default function ContractTemplatesPage() {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [toast, setToast] = useState<{ msg: string; type: "success" | "error" } | null>(null);
   const pageSize = 20;
+  const displayName = (fn: string) => {
+    const idx = fn.indexOf('_');
+    return idx >= 0 ? fn.substring(idx + 1) : fn;
+  };
 
   useEffect(() => {
     const load = async () => {
@@ -160,11 +164,10 @@ export default function ContractTemplatesPage() {
                 <input type="file" accept=".doc,.docx" className="border rounded px-3 py-2 w-full" onChange={e => setWordFile(e.target.files?.[0] || null)} />
                 {isEdit && items.find(x => x.id === editId)?.fileNames?.filter(fn => fn.toLowerCase().endsWith('.doc') || fn.toLowerCase().endsWith('.docx')).map(fn => (
                   <div key={fn} className="flex items-center justify-between text-sm mt-2 border rounded px-2 py-1">
-                    <span className="truncate mr-2">{fn}</span>
+                    <span className="truncate mr-2">{displayName(fn)}</span>
                     <div className="flex items-center space-x-2">
-                      <button className="text-blue-600" onClick={() => window.open(`${API_BASE_URL}/api/contract-templates/${editId}/files/${fn}`, '_blank')}>Preview</button>
                       <button className="text-gray-700" onClick={() => window.open(`${API_BASE_URL}/api/contract-templates/${editId}/files/${fn}`, '_blank')}>Tải file</button>
-                      <button className="text-red-600" onClick={async () => { const token = localStorage.getItem('jwt'); await fetch(`${API_BASE_URL}/api/contract-templates/${editId}/files/${fn}`, { method: 'DELETE', headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) } }); const data = await apiFetch('/api/contract-templates'); setItems(Array.isArray(data) ? data : []); }}>Xóa</button>
+                      <button className="text-red-600" onClick={async () => { try { const token = localStorage.getItem('jwt'); await fetch(`${API_BASE_URL}/api/contract-templates/${editId}/files/${fn}`, { method: 'DELETE', headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) } }); const data = await apiFetch('/api/contract-templates'); setItems(Array.isArray(data) ? data : []); } catch (e: any) { const msg = String(e?.message || e); if (!msg.includes('ERR_ABORTED')) console.error(e); } }}>Xóa</button>
                     </div>
                   </div>
                 ))}
@@ -174,11 +177,10 @@ export default function ContractTemplatesPage() {
                 <input type="file" accept=".xls,.xlsx" className="border rounded px-3 py-2 w-full" onChange={e => setExcelFile(e.target.files?.[0] || null)} />
                 {isEdit && items.find(x => x.id === editId)?.fileNames?.filter(fn => fn.toLowerCase().endsWith('.xls') || fn.toLowerCase().endsWith('.xlsx')).map(fn => (
                   <div key={fn} className="flex items-center justify-between text-sm mt-2 border rounded px-2 py-1">
-                    <span className="truncate mr-2">{fn}</span>
+                    <span className="truncate mr-2">{displayName(fn)}</span>
                     <div className="flex items-center space-x-2">
-                      <button className="text-blue-600" onClick={() => window.open(`${API_BASE_URL}/api/contract-templates/${editId}/files/${fn}`, '_blank')}>Preview</button>
                       <button className="text-gray-700" onClick={() => window.open(`${API_BASE_URL}/api/contract-templates/${editId}/files/${fn}`, '_blank')}>Tải file</button>
-                      <button className="text-red-600" onClick={async () => { const token = localStorage.getItem('jwt'); await fetch(`${API_BASE_URL}/api/contract-templates/${editId}/files/${fn}`, { method: 'DELETE', headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) } }); const data = await apiFetch('/api/contract-templates'); setItems(Array.isArray(data) ? data : []); }}>Xóa</button>
+                      <button className="text-red-600" onClick={async () => { try { const token = localStorage.getItem('jwt'); await fetch(`${API_BASE_URL}/api/contract-templates/${editId}/files/${fn}`, { method: 'DELETE', headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) } }); const data = await apiFetch('/api/contract-templates'); setItems(Array.isArray(data) ? data : []); } catch (e: any) { const msg = String(e?.message || e); if (!msg.includes('ERR_ABORTED')) console.error(e); } }}>Xóa</button>
                     </div>
                   </div>
                 ))}
