@@ -5,6 +5,7 @@ import CompaniesPage from "@/pages/admin/CompaniesPage";
 import RolesPage from "@/pages/admin/RolesPage";
 import SystemLogin from "@/pages/SystemLogin";
 import Dashboard from "@/components/Dashboard";
+import ContractTypesPage from "@/pages/ContractTypesPage";
 
 export default function App() {
   return (
@@ -13,6 +14,7 @@ export default function App() {
         <Route path="/" element={<Home />} />
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/workflow" element={<Workflow />} />
+        <Route path="/contract-types" element={<ContractTypesPage />} />
         <Route path="/login" element={<SystemLogin />} />
         <Route path="/system-login" element={<SystemLogin />} />
         <Route path="/admin/companies" element={<CompaniesPage />} />
