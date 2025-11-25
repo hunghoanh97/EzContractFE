@@ -3,6 +3,7 @@ import Home from "@/pages/Home";
 import Workflow from "@/pages/Workflow";
 import CompaniesPage from "@/pages/admin/CompaniesPage";
 import RolesPage from "@/pages/admin/RolesPage";
+import UsersPage from "@/pages/admin/UsersPage";
 import SystemLogin from "@/pages/SystemLogin";
 import Dashboard from "@/components/Dashboard";
 import ContractTypesPage from "@/pages/ContractTypesPage";
@@ -18,6 +19,7 @@ export default function App() {
         <Route path="/login" element={<SystemLogin />} />
         <Route path="/system-login" element={<SystemLogin />} />
         <Route path="/admin/companies" element={<CompaniesPage />} />
+        <Route path="/admin/users" element={<UsersPage />} />
         <Route path="/admin/roles" element={<RolesPage />} />
         <Route path="/other" element={<div className="text-center text-xl">Other Page - Coming Soon</div>} />
       </Routes>

@@ -1,52 +1,185 @@
 import Layout from "@/components/Layout";
-import { API_BASE_URL, apiFetch } from "@/services/api";
-import { useEffect, useState } from "react";
+import Toast from "@/components/Toast";
+import { apiFetch, API_BASE_URL } from "@/services/api";
+import { useEffect, useMemo, useState } from "react";
 
-type Company = { id?: string; name: string; code: string; isActive: boolean };
+type Company = { id: string; name: string; code: string; isActive: boolean };
 
 export default function CompaniesPage() {
   const [items, setItems] = useState<Company[]>([]);
-  const [form, setForm] = useState<Company>({ name: "", code: "", isActive: true });
-  const load = async () => {
-    const data = await apiFetch("/api/companies");
-    setItems(data);
-  };
-  const create = async () => {
-    await fetch(`${API_BASE_URL}/api/companies`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(form) });
-    setForm({ name: "", code: "", isActive: true });
+  const [loading, setLoading] = useState(false);
+  const [qName, setQName] = useState("");
+  const [qCode, setQCode] = useState("");
+  const [showForm, setShowForm] = useState(false);
+  const [isEdit, setIsEdit] = useState(false);
+  const [editId, setEditId] = useState<string>("");
+  const [form, setForm] = useState<{ name: string; code: string; isActive: string }>(() => ({ name: "", code: "", isActive: "1" }));
+  const [saving, setSaving] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [toast, setToast] = useState<{ msg: string; type: "success" | "error" } | null>(null);
+  const pageSize = 20;
+
+  useEffect(() => {
+    const load = async () => {
+      setLoading(true);
+      try {
+        const data = await apiFetch("/api/companies");
+        setItems(Array.isArray(data) ? data : []);
+      } finally {
+        setLoading(false);
+      }
+    };
     load();
+  }, []);
+
+  const filtered = useMemo(() => {
+    return items
+      .filter(it => (qName ? it.name.toLowerCase().includes(qName.toLowerCase()) : true))
+      .filter(it => (qCode ? it.code.toLowerCase().includes(qCode.toLowerCase()) : true))
+      .slice(0, pageSize);
+  }, [items, qName, qCode]);
+
+  const openAdd = () => {
+    setIsEdit(false);
+    setEditId("");
+    setForm({ name: "", code: "", isActive: "1" });
+    setShowForm(true);
   };
-  useEffect(() => { load(); }, []);
+
+  const openEdit = (it: Company) => {
+    setIsEdit(true);
+    setEditId(it.id);
+    setForm({ name: it.name, code: it.code, isActive: it.isActive ? "1" : "0" });
+    setShowForm(true);
+  };
+
+  const save = async () => {
+    setSaving(true);
+    try {
+      if (isEdit && editId) {
+        await apiFetch(`/api/companies/${editId}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name: form.name, code: form.code, isActive: form.isActive === "1" })
+        });
+      } else {
+        await apiFetch("/api/companies", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name: form.name, code: form.code, isActive: form.isActive === "1" })
+        });
+      }
+      const data = await apiFetch("/api/companies");
+      setItems(Array.isArray(data) ? data : []);
+      setShowForm(false);
+      setToast({ msg: isEdit ? "Cập nhật công ty thành công" : "Thêm công ty thành công", type: "success" });
+    } catch (e) {
+      setToast({ msg: isEdit ? "Cập nhật công ty thất bại" : "Thêm công ty thất bại", type: "error" });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const remove = async () => {
+    if (!isEdit || !editId) return;
+    setSaving(true);
+    try {
+      const token = localStorage.getItem("jwt");
+      await fetch(`${API_BASE_URL}/api/companies/${editId}`, { method: "DELETE", headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) } });
+      const data = await apiFetch("/api/companies");
+      setItems(Array.isArray(data) ? data : []);
+      setShowForm(false);
+      setToast({ msg: "Xóa công ty thành công", type: "success" });
+    } catch (e) {
+      setToast({ msg: "Xóa công ty thất bại", type: "error" });
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <Layout>
-      <h2 className="text-xl font-semibold mb-4">Công ty</h2>
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-4">
-        <input className="border rounded px-3 py-2" placeholder="Tên" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} />
-        <input className="border rounded px-3 py-2" placeholder="Mã" value={form.code} onChange={e => setForm({ ...form, code: e.target.value })} />
-        <select className="border rounded px-3 py-2" value={form.isActive ? "1" : "0"} onChange={e => setForm({ ...form, isActive: e.target.value === "1" })}>
-          <option value="1">Kích hoạt</option>
-          <option value="0">Tạm dừng</option>
-        </select>
-        <button className="px-3 py-2 bg-blue-600 text-white rounded" onClick={create}>Thêm</button>
+      <div className="bg-white border rounded-md">
+        <div className="p-4 border-b flex items-center justify-between">
+          <h2 className="text-xl font-semibold">Công ty</h2>
+          <div className="flex items-center space-x-3">
+            <div className="text-sm text-gray-500">Hiển thị {filtered.length} / {items.length}</div>
+            <button onClick={openAdd} className="px-3 py-2 bg-blue-600 text-white rounded-md">Thêm mới</button>
+          </div>
+        </div>
+        <div className="p-4 grid grid-cols-1 md:grid-cols-3 gap-3 border-b">
+          <input className="border rounded px-3 py-2" placeholder="Tìm theo tên" value={qName} onChange={e => setQName(e.target.value)} />
+          <input className="border rounded px-3 py-2" placeholder="Tìm theo mã" value={qCode} onChange={e => setQCode(e.target.value)} />
+          <div className="text-sm text-gray-600 flex items-center">{loading ? "Đang tải dữ liệu..." : ""}</div>
+        </div>
+        <div className="p-0">
+          <table className="w-full">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="p-2 w-16 text-center">STT</th>
+                <th className="p-2 text-left">Tên</th>
+                <th className="p-2 text-left">Mã</th>
+                <th className="p-2 text-left">Trạng thái</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.length === 0 && (
+                <tr>
+                  <td className="p-3 text-center text-gray-500" colSpan={4}>Không có dữ liệu</td>
+                </tr>
+              )}
+              {filtered.map((it, idx) => (
+                <tr key={it.id} className="border-t hover:bg-gray-50 cursor-pointer" onClick={() => openEdit(it)}>
+                  <td className="p-2 text-center">{idx + 1}</td>
+                  <td className="p-2">{it.name}</td>
+                  <td className="p-2 font-mono text-sm">{it.code}</td>
+                  <td className="p-2 text-gray-700">{it.isActive ? "Kích hoạt" : "Tạm dừng"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <div className="p-4 border-t text-sm text-gray-500">Tối đa {pageSize} bản ghi đầu tiên</div>
       </div>
-      <table className="w-full border">
-        <thead>
-          <tr className="bg-gray-100">
-            <th className="p-2 text-left">Tên</th>
-            <th className="p-2 text-left">Mã</th>
-            <th className="p-2 text-left">Trạng thái</th>
-          </tr>
-        </thead>
-        <tbody>
-          {items.map(it => (
-            <tr key={it.id} className="border-t">
-              <td className="p-2">{it.name}</td>
-              <td className="p-2">{it.code}</td>
-              <td className="p-2">{it.isActive ? "Kích hoạt" : "Tạm dừng"}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+
+      {showForm && (
+        <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
+          <div className="bg-white rounded-md shadow-lg w-full max-w-lg">
+            <div className="p-4 border-b flex items-center justify-between">
+              <h3 className="text-lg font-semibold">{isEdit ? "Sửa" : "Thêm mới"}</h3>
+              <button className="text-gray-600" onClick={() => setShowForm(false)}>✕</button>
+            </div>
+            <div className="p-4 space-y-3">
+              <input className="border rounded px-3 py-2 w-full" placeholder="Tên" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} />
+              <input className="border rounded px-3 py-2 w-full" placeholder="Mã" value={form.code} onChange={e => setForm({ ...form, code: e.target.value })} />
+              <select className="border rounded px-3 py-2 w-full" value={form.isActive} onChange={e => setForm({ ...form, isActive: e.target.value })}>
+                <option value="1">Kích hoạt</option>
+                <option value="0">Tạm dừng</option>
+              </select>
+            </div>
+            <div className="p-4 border-t flex items-center justify-end space-x-3">
+              <button className="px-3 py-2 rounded-md border" onClick={() => setShowForm(false)}>Hủy</button>
+              <button disabled={saving || !isEdit} className="px-3 py-2 rounded-md bg-red-600 text-white" onClick={() => setConfirmDelete(true)}>Xóa</button>
+              <button disabled={saving} className="px-3 py-2 rounded-md bg-blue-600 text-white" onClick={save}>{saving ? "Đang lưu..." : "Lưu"}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {confirmDelete && (
+        <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
+          <div className="bg-white rounded-md shadow-lg w-full max-w-md">
+            <div className="p-4 border-b"><h3 className="text-lg font-semibold">Xác nhận xóa</h3></div>
+            <div className="p-4 text-gray-700">Bạn có chắc muốn xóa công ty này?</div>
+            <div className="p-4 border-t flex items-center justify-end space-x-3">
+              <button className="px-3 py-2 rounded-md border" onClick={() => setConfirmDelete(false)}>Hủy</button>
+              <button className="px-3 py-2 rounded-md bg-red-600 text-white" onClick={() => { setConfirmDelete(false); remove(); }}>Xóa</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {toast && <Toast message={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
     </Layout>
   );
 }

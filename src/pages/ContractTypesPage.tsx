@@ -1,6 +1,7 @@
 import Layout from "@/components/Layout";
+import Toast from "@/components/Toast";
 import { useEffect, useMemo, useState } from "react";
-import { apiFetch } from "@/services/api";
+import { apiFetch, API_BASE_URL } from "@/services/api";
 
 type ContractType = {
   id: string;
@@ -23,6 +24,8 @@ export default function ContractTypesPage() {
   const [form, setForm] = useState<{ name: string; code: string; description: string; companyId?: string; status?: string }>({ name: "", code: "", description: "", companyId: "", status: "ACTIVE" });
   const [saving, setSaving] = useState(false);
   const [companies, setCompanies] = useState<Array<{ id: string; name: string }>>([]);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [toast, setToast] = useState<{ msg: string; type: "success" | "error" } | null>(null);
   const pageSize = 20;
 
   useEffect(() => {
@@ -82,8 +85,34 @@ export default function ContractTypesPage() {
       const data = await apiFetch("/api/contract-types");
       setItems(Array.isArray(data) ? data : []);
       setShowForm(false);
+      setToast({ msg: isEdit ? "Cập nhật thành công" : "Thêm mới thành công", type: "success" });
     } catch (e) {
       console.error(e);
+      setToast({ msg: isEdit ? "Cập nhật thất bại" : "Thêm mới thất bại", type: "error" });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const remove = async () => {
+    if (!isEdit || !editId) return;
+    setSaving(true);
+    try {
+      const token = localStorage.getItem("jwt");
+      await fetch(`${API_BASE_URL}/api/contract-types/${editId}`, {
+        method: "DELETE",
+        headers: {
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+      });
+      const data = await apiFetch("/api/contract-types");
+      setItems(Array.isArray(data) ? data : []);
+      setShowForm(false);
+      setToast({ msg: "Xóa thành công", type: "success" });
+    } catch (e) {
+      const msg = String((e as any)?.message || e);
+      if (!msg.includes("ERR_ABORTED")) console.error(e);
+      setToast({ msg: "Xóa thất bại", type: "error" });
     } finally {
       setSaving(false);
     }
@@ -172,11 +201,28 @@ export default function ContractTypesPage() {
             </div>
             <div className="p-4 border-t flex items-center justify-end space-x-3">
               <button className="px-3 py-2 rounded-md border" onClick={() => setShowForm(false)}>Hủy</button>
+              <button disabled={saving || !isEdit} className="px-3 py-2 rounded-md bg-red-600 text-white" onClick={() => setConfirmDelete(true)}>Xóa</button>
               <button disabled={saving} className="px-3 py-2 rounded-md bg-blue-600 text-white" onClick={save}>{saving ? "Đang lưu..." : "Lưu"}</button>
             </div>
           </div>
         </div>
       )}
+
+      {confirmDelete && (
+        <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
+          <div className="bg-white rounded-md shadow-lg w-full max-w-md">
+            <div className="p-4 border-b">
+              <h3 className="text-lg font-semibold">Xác nhận xóa</h3>
+            </div>
+            <div className="p-4 text-gray-700">Bạn có chắc muốn xóa loại hợp đồng này?</div>
+            <div className="p-4 border-t flex items-center justify-end space-x-3">
+              <button className="px-3 py-2 rounded-md border" onClick={() => setConfirmDelete(false)}>Hủy</button>
+              <button className="px-3 py-2 rounded-md bg-red-600 text-white" onClick={() => { setConfirmDelete(false); remove(); }}>Xóa</button>
+            </div>
+          </div>
+        </div>
+      )}
+      {toast && <Toast message={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
     </Layout>
   );
 }

@@ -2,6 +2,9 @@ import { Link, useLocation } from "react-router-dom";
 
 const items = [
   { path: "/", label: "Trang chủ" },
+  { path: "/admin/companies", label: "Công ty" },
+  { path: "/admin/users", label: "Người dùng" },
+  { path: "/admin/roles", label: "Vai trò" },
   { path: "/contract-types", label: "Loại hợp đồng" },
   { path: "/contract-templates", label: "Mẫu hợp đồng" },
   { path: "/create-contract", label: "Tạo hợp đồng" },
