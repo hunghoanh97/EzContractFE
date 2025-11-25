@@ -1,6 +1,9 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import Home from "@/pages/Home";
-import DkkdLogin from "@/components/DkkdLogin";
+import Workflow from "@/pages/Workflow";
+import CompaniesPage from "@/pages/admin/CompaniesPage";
+import RolesPage from "@/pages/admin/RolesPage";
+import SystemLogin from "@/pages/SystemLogin";
 import Dashboard from "@/components/Dashboard";
 
 export default function App() {
@@ -8,8 +11,12 @@ export default function App() {
     <Router>
       <Routes>
         <Route path="/" element={<Home />} />
-        <Route path="/login" element={<DkkdLogin />} />
         <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/workflow" element={<Workflow />} />
+        <Route path="/login" element={<SystemLogin />} />
+        <Route path="/system-login" element={<SystemLogin />} />
+        <Route path="/admin/companies" element={<CompaniesPage />} />
+        <Route path="/admin/roles" element={<RolesPage />} />
         <Route path="/other" element={<div className="text-center text-xl">Other Page - Coming Soon</div>} />
       </Routes>
     </Router>

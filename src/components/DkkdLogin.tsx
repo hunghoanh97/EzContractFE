@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { dkkdAuthService, DkkdInitState, DkkdLoginRequest } from '@/services/dkkdAuthService';
 
 declare global {
@@ -13,6 +14,7 @@ declare global {
 import DkkdLoginIframe from './DkkdLoginIframe';
 
 export default function DkkdLogin() {
+  const navigate = useNavigate();
   const [useIframe, setUseIframe] = useState(false);
   const [recaptchaFailed, setRecaptchaFailed] = useState(false);
   const [initState, setInitState] = useState<DkkdInitState | null>(null);
@@ -172,9 +174,52 @@ export default function DkkdLogin() {
       const response = await dkkdAuthService.login(loginRequest);
 
       if (response.success) {
-        setIsLoggedIn(true);
-        localStorage.setItem('sessionId', response.authToken!);
-        setError('');
+        // Cross-check credentials against DKKD by using workflow LOGIN_STEP
+        try {
+          const initResp = await fetch('http://localhost:5364/api/BusinessRegistrationWorkflow/initialize', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ sessionId: response.authToken })
+          });
+          const initData = await initResp.json();
+          const workflowId = initData.workflowId;
+
+          const verifyPayload = {
+            workflowId,
+            sectionCode: 'LOGIN_STEP',
+            fieldValues: {
+              'ctl00$C$W1$UserName': username,
+              'ctl00$C$W1$Password': password
+            },
+            actionName: 'ctl00$C$W1$btnStep1_Login'
+          };
+          const verifyResp = await fetch('http://localhost:5364/api/BusinessRegistrationWorkflow/section/fill', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(verifyPayload)
+          });
+          const verifyData = await verifyResp.json();
+
+          if (verifyData.success) {
+            setIsLoggedIn(true);
+            localStorage.setItem('sessionId', response.authToken!);
+            setError('');
+          } else {
+            setError(verifyData.message || 'Đăng nhập DKKD không hợp lệ');
+            if (window.grecaptcha) {
+              window.grecaptcha.reset();
+              setRecaptchaToken('');
+            }
+            return;
+          }
+        } catch (e) {
+          setError('Không thể xác thực với DKKD. Vui lòng thử lại.');
+          if (window.grecaptcha) {
+            window.grecaptcha.reset();
+            setRecaptchaToken('');
+          }
+          return;
+        }
       } else {
         setError(response.message);
         // Reset reCAPTCHA on failed login
@@ -215,6 +260,7 @@ export default function DkkdLogin() {
     setUsername('');
     setPassword('');
     setRecaptchaToken('');
+    setUseIframe(false);
     initializeLogin();
   };
 
@@ -234,6 +280,26 @@ export default function DkkdLogin() {
             </div>
             <h2 className="text-2xl font-bold text-gray-900 mb-2">Đăng nhập thành công!</h2>
             <p className="text-gray-600">Bạn đã đăng nhập thành công vào hệ thống DKKD qua SaaS.</p>
+          </div>
+          <div className="grid grid-cols-1 gap-3 mb-6">
+            <button
+              onClick={() => navigate('/dashboard')}
+              className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors"
+            >
+              Đi tới Dashboard
+            </button>
+            <button
+              onClick={() => navigate('/')}
+              className="w-full bg-gray-800 text-white py-2 px-4 rounded-md hover:bg-gray-900 transition-colors"
+            >
+              Về Trang chủ
+            </button>
+            <button
+              onClick={() => navigate('/workflow')}
+              className="w-full bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 transition-colors"
+            >
+              Tiến độ Workflow
+            </button>
           </div>
           <button
             onClick={handleLogout}
