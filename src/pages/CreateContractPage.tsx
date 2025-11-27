@@ -42,9 +42,27 @@ export default function CreateContractPage() {
 
   const canInit = companyId && templateId && wordFile;
 
-  const downloadTemplateExcel = () => {
+  const downloadTemplateExcel = async () => {
     if (!templateId || !excelTemplate) return;
-    window.open(`${API_BASE_URL}/api/contract-templates/${templateId}/files/${excelTemplate}`, '_blank');
+    try {
+      const token = localStorage.getItem('jwt');
+      const res = await fetch(`${API_BASE_URL}/api/contract-templates/${templateId}/files/${excelTemplate}`, { headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) } });
+      if (!res.ok) throw new Error(`API error ${res.status}`);
+      const blob = await res.blob();
+      const cd = res.headers.get('content-disposition') || '';
+      const m = /filename="?([^";]+)"?/i.exec(cd);
+      const fname = m ? m[1] : displayName(excelTemplate);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fname;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      setToast({ msg: 'Tải mẫu thất bại', type: 'error' });
+    }
   };
 
   const initContract = async () => {
@@ -61,8 +79,31 @@ export default function CreateContractPage() {
       if (!res.ok) throw new Error(`API error ${res.status}`);
       const data = await res.json();
       setToast({ msg: "Khởi tạo hợp đồng thành công", type: "success" });
-      if (data?.downloadUrl) window.open(data.downloadUrl, '_blank');
-    } catch (e) {
+      if (data?.downloadUrl) {
+        try {
+          const token = localStorage.getItem("jwt");
+          const dres = await fetch(data.downloadUrl, { headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) } });
+          if (dres.ok) {
+            const blob = await dres.blob();
+            const cd = dres.headers.get('content-disposition') || '';
+            const m = /filename="?([^";]+)"?/i.exec(cd);
+            const fname = m ? m[1] : (displayName(wordFile) || 'contract.docx');
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = fname;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            URL.revokeObjectURL(url);
+          }
+        } catch {}
+      }
+    } catch (e: any) {
+      const msg = String(e?.message || e);
+      if (msg.includes('ERR_ABORTED')) {
+        return;
+      }
       setToast({ msg: "Khởi tạo hợp đồng thất bại", type: "error" });
     } finally { setSaving(false); }
   };
