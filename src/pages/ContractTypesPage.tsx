@@ -27,6 +27,7 @@ export default function ContractTypesPage() {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [toast, setToast] = useState<{ msg: string; type: "success" | "error" } | null>(null);
   const pageSize = 20;
+  const [page, setPage] = useState(1);
 
   useEffect(() => {
     const load = async () => {
@@ -45,12 +46,19 @@ export default function ContractTypesPage() {
     load();
   }, []);
 
-  const filtered = useMemo(() => {
+  const filteredAll = useMemo(() => {
     return items
       .filter(it => (qName ? it.name.toLowerCase().includes(qName.toLowerCase()) : true))
-      .filter(it => (qCode ? it.code.toLowerCase().includes(qCode.toLowerCase()) : true))
-      .slice(0, pageSize);
+      .filter(it => (qCode ? it.code.toLowerCase().includes(qCode.toLowerCase()) : true));
   }, [items, qName, qCode]);
+  const totalRecords = filteredAll.length;
+  const totalPages = Math.max(1, Math.ceil(totalRecords / pageSize));
+  const pageClamped = Math.min(page, totalPages);
+  const filtered = useMemo(() => {
+    const start = (pageClamped - 1) * pageSize;
+    return filteredAll.slice(start, start + pageSize);
+  }, [filteredAll, pageClamped]);
+  useEffect(() => { setPage(1); }, [qName, qCode]);
 
   const openAdd = () => {
     setIsEdit(false);
@@ -174,7 +182,20 @@ export default function ContractTypesPage() {
             </tbody>
           </table>
         </div>
-        <div className="p-4 border-t text-sm text-gray-500">Tối đa {pageSize} bản ghi đầu tiên</div>
+        <div className="p-4 border-t text-sm text-gray-700 flex items-center justify-between">
+          <div>
+            Trang
+            <select className="border rounded px-2 py-1 mx-2" value={pageClamped} onChange={e => setPage(parseInt(e.target.value) || 1)}>
+              {Array.from({ length: totalPages }).map((_, i) => (<option key={i+1} value={i+1}>{i+1}</option>))}
+            </select>
+            / {totalPages}
+          </div>
+          <div className="flex items-center space-x-2">
+            <button className="px-2 py-1 border rounded" disabled={pageClamped <= 1} onClick={() => setPage(p => Math.max(1, p - 1))}>« Trước</button>
+            <button className="px-2 py-1 border rounded" disabled={pageClamped >= totalPages} onClick={() => setPage(p => Math.min(totalPages, p + 1))}>Sau »</button>
+            <span className="ml-3">Tổng: {totalRecords}</span>
+          </div>
+        </div>
       </div>
 
       {showForm && (

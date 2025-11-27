@@ -10,6 +10,7 @@ import ContractTypesPage from "@/pages/ContractTypesPage";
 import ContractFieldsPage from "@/pages/ContractFieldsPage";
 import ContractFormInfoPage from "@/pages/ContractFormInfoPage";
 import ContractTemplatesPage from "@/pages/ContractTemplatesPage";
+import CreateContractPage from "@/pages/CreateContractPage";
 
 export default function App() {
   return (
@@ -22,6 +23,7 @@ export default function App() {
         <Route path="/contract-fields" element={<ContractFieldsPage />} />
         <Route path="/contract-form-info" element={<ContractFormInfoPage />} />
         <Route path="/contract-templates" element={<ContractTemplatesPage />} />
+        <Route path="/create-contract" element={<CreateContractPage />} />
         <Route path="/login" element={<SystemLogin />} />
         <Route path="/system-login" element={<SystemLogin />} />
         <Route path="/admin/companies" element={<CompaniesPage />} />

@@ -24,6 +24,7 @@ export default function ContractTemplatesPage() {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [toast, setToast] = useState<{ msg: string; type: "success" | "error" } | null>(null);
   const pageSize = 20;
+  const [page, setPage] = useState(1);
   const displayName = (fn: string) => {
     const idx = fn.indexOf('_');
     return idx >= 0 ? fn.substring(idx + 1) : fn;
@@ -44,7 +45,12 @@ export default function ContractTemplatesPage() {
     load();
   }, []);
 
-  const filtered = useMemo(() => items.filter(it => (qName ? it.name.toLowerCase().includes(qName.toLowerCase()) : true)).filter(it => (qStatus ? (it.status || "").toLowerCase().includes(qStatus.toLowerCase()) : true)).slice(0, pageSize), [items, qName, qStatus]);
+  const filteredAll = useMemo(() => items.filter(it => (qName ? it.name.toLowerCase().includes(qName.toLowerCase()) : true)).filter(it => (qStatus ? (it.status || "").toLowerCase().includes(qStatus.toLowerCase()) : true)), [items, qName, qStatus]);
+  const totalRecords = filteredAll.length;
+  const totalPages = Math.max(1, Math.ceil(totalRecords / pageSize));
+  const pageClamped = Math.min(page, totalPages);
+  const filtered = useMemo(() => { const start = (pageClamped - 1) * pageSize; return filteredAll.slice(start, start + pageSize); }, [filteredAll, pageClamped]);
+  useEffect(() => { setPage(1); }, [qName, qStatus]);
 
   const openAdd = () => {
     setIsEdit(false); setEditId(""); setForm({ name: "", description: "", status: "ACTIVE", contractTypeId: "", contractFormDataId: "" }); setWordFile(null); setExcelFile(null); setShowForm(true);
@@ -68,7 +74,15 @@ export default function ContractTemplatesPage() {
         const fd = new FormData();
         if (wordFile) fd.append("files", wordFile);
         if (excelFile) fd.append("files", excelFile);
-        await fetch(`${API_BASE_URL}/api/contract-templates/${id}/files`, { method: "POST", headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) }, body: fd });
+        const res = await fetch(`${API_BASE_URL}/api/contract-templates/${id}/files`, { method: "POST", headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) }, body: fd });
+        try {
+          if (res.ok) {
+            const j = await res.json();
+            if (j?.import?.addedFields) {
+              setToast({ msg: `Đã import từ Excel: thêm ${j.import.addedFields} trường`, type: "success" });
+            }
+          }
+        } catch {}
       }
       const data = await apiFetch("/api/contract-templates");
       setItems(Array.isArray(data) ? data : []);
@@ -100,7 +114,7 @@ export default function ContractTemplatesPage() {
         <div className="p-4 border-b flex items-center justify-between">
           <h2 className="text-xl font-semibold">Mẫu hợp đồng</h2>
           <div className="flex items-center space-x-3">
-            <div className="text-sm text-gray-500">Hiển thị {filtered.length} / {items.length}</div>
+            <div className="text-sm text-gray-500">Hiển thị {filtered.length} / {filteredAll.length}</div>
             <button onClick={openAdd} className="px-3 py-2 bg-blue-600 text-white rounded-md">Thêm mới</button>
           </div>
         </div>
@@ -134,7 +148,20 @@ export default function ContractTemplatesPage() {
             </tbody>
           </table>
         </div>
-        <div className="p-4 border-t text-sm text-gray-500">Tối đa {pageSize} bản ghi đầu tiên</div>
+        <div className="p-4 border-t text-sm text-gray-700 flex items-center justify-between">
+          <div>
+            Trang
+            <select className="border rounded px-2 py-1 mx-2" value={pageClamped} onChange={e => setPage(parseInt(e.target.value) || 1)}>
+              {Array.from({ length: totalPages }).map((_, i) => (<option key={i+1} value={i+1}>{i+1}</option>))}
+            </select>
+            / {totalPages}
+          </div>
+          <div className="flex items-center space-x-2">
+            <button className="px-2 py-1 border rounded" disabled={pageClamped <= 1} onClick={() => setPage(p => Math.max(1, p - 1))}>« Trước</button>
+            <button className="px-2 py-1 border rounded" disabled={pageClamped >= totalPages} onClick={() => setPage(p => Math.min(totalPages, p + 1))}>Sau »</button>
+            <span className="ml-3">Tổng: {totalRecords}</span>
+          </div>
+        </div>
       </div>
 
       {showForm && (
@@ -184,6 +211,7 @@ export default function ContractTemplatesPage() {
                     </div>
                   </div>
                 ))}
+                
               </div>
             </div>
             <div className="p-4 border-t flex items-center justify-end space-x-3">
