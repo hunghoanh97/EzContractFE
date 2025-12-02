@@ -1,7 +1,8 @@
 export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "";
+import { getAccessTokenAuto } from "@/services/authService";
 
 export async function apiFetch(path: string, options: RequestInit = {}) {
-  const token = localStorage.getItem("jwt");
+  const token = await getAccessTokenAuto();
   const headers = {
     ...(options.headers || {}),
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
