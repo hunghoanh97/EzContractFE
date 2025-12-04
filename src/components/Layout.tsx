@@ -1,15 +1,16 @@
 import Sidebar from "@/components/Sidebar";
 import { useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { logoutSystem } from "@/services/authService";
+import { logoutSystem, isAuthenticatedSync, getTokensSync } from "@/services/authService";
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const navigate = useNavigate();
-  const token = localStorage.getItem("jwt") || "";
+  const tokenObj = getTokensSync();
+  const token = tokenObj?.accessToken || "";
 
   useEffect(() => {
-    if (!token) navigate("/login", { replace: true });
-  }, [token, navigate]);
+    if (!isAuthenticatedSync()) navigate("/login", { replace: true });
+  }, [navigate]);
 
   const userInfo = useMemo(() => {
     try {

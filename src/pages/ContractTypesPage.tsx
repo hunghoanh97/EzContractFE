@@ -106,21 +106,18 @@ export default function ContractTypesPage() {
     if (!isEdit || !editId) return;
     setSaving(true);
     try {
-      const token = localStorage.getItem("jwt");
-      await fetch(`${API_BASE_URL}/api/contract-types/${editId}`, {
-        method: "DELETE",
-        headers: {
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-      });
+      await apiFetch(`/api/contract-types/${editId}`, { method: "DELETE" });
       const data = await apiFetch("/api/contract-types");
       setItems(Array.isArray(data) ? data : []);
       setShowForm(false);
       setToast({ msg: "Xóa thành công", type: "success" });
     } catch (e) {
+      const code = (e && (e as any).code) || "";
       const msg = String((e as any)?.message || e);
-      if (!msg.includes("ERR_ABORTED")) console.error(e);
-      setToast({ msg: "Xóa thất bại", type: "error" });
+      if (!(code === 'NETWORK_ABORTED' || msg.includes('NETWORK_ABORTED') || msg.includes('ERR_ABORTED'))) {
+        console.error(e);
+        setToast({ msg: "Xóa thất bại", type: "error" });
+      }
     } finally {
       setSaving(false);
     }

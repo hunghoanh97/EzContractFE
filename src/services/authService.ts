@@ -39,14 +39,35 @@ export async function getAccessTokenAuto(): Promise<string | null> {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ userId: t.userId, refreshToken: t.refreshToken })
     });
-    if (!res.ok) { logoutSystem(); return null; }
+    if (res.status === 401) { logoutSystem(); return null; }
+    if (!res.ok) { return null; }
     const data = await res.json();
     const expiresAt = Date.now() + (Number(data.accessTokenExpiresIn || 300) * 1000);
     const nt = { accessToken: data.accessToken, refreshToken: t.refreshToken, userId: t.userId, expiresAt };
     saveTokens(nt);
     return nt.accessToken;
   } catch {
-    logoutSystem();
+    return null;
+  }
+}
+
+export async function refreshAccessTokenByStoredTokens(): Promise<string | null> {
+  const t = loadTokens();
+  if (!t) return null;
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/auth/refresh`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId: t.userId, refreshToken: t.refreshToken })
+    });
+    if (res.status === 401) { logoutSystem(); return null; }
+    if (!res.ok) { return null; }
+    const data = await res.json();
+    const expiresAt = Date.now() + (Number(data.accessTokenExpiresIn || 300) * 1000);
+    const nt = { accessToken: data.accessToken, refreshToken: t.refreshToken, userId: t.userId, expiresAt };
+    saveTokens(nt);
+    return nt.accessToken;
+  } catch {
     return null;
   }
 }
@@ -55,4 +76,8 @@ export function isAuthenticatedSync(): boolean {
   const t = loadTokens();
   if (!t) return false;
   return t.expiresAt > Date.now();
+}
+
+export function getTokensSync(): { accessToken: string; refreshToken: string; userId: string; expiresAt: number } | null {
+  return loadTokens();
 }

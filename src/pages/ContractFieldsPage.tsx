@@ -99,8 +99,7 @@ export default function ContractFieldsPage() {
     if (!isEdit || !editId) return;
     setSaving(true);
     try {
-      const token = localStorage.getItem("jwt");
-      await fetch(`${API_BASE_URL}/api/contract-fields/${editId}`, { method: "DELETE", headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) } });
+      await apiFetch(`/api/contract-fields/${editId}`, { method: "DELETE" });
       const data = await apiFetch("/api/contract-fields");
       setItems(Array.isArray(data) ? data : []);
       setShowForm(false);

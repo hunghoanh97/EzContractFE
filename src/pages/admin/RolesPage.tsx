@@ -84,8 +84,7 @@ export default function RolesPage() {
     if (!isEdit || !editId) return;
     setSaving(true);
     try {
-      const token = localStorage.getItem("jwt");
-      await fetch(`${API_BASE_URL}/api/roles/${editId}`, { method: "DELETE", headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) } });
+      await apiFetch(`/api/roles/${editId}`, { method: "DELETE" });
       const data = await apiFetch("/api/roles");
       setItems(Array.isArray(data) ? data : []);
       setShowForm(false);

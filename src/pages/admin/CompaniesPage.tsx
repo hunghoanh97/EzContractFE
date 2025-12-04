@@ -92,8 +92,7 @@ export default function CompaniesPage() {
     if (!isEdit || !editId) return;
     setSaving(true);
     try {
-      const token = localStorage.getItem("jwt");
-      await fetch(`${API_BASE_URL}/api/companies/${editId}`, { method: "DELETE", headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) } });
+      await apiFetch(`/api/companies/${editId}`, { method: "DELETE" });
       const data = await apiFetch("/api/companies");
       setItems(Array.isArray(data) ? data : []);
       setShowForm(false);

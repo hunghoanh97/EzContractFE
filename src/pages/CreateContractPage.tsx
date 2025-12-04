@@ -1,6 +1,7 @@
 import Layout from "@/components/Layout";
 import Toast from "@/components/Toast";
 import { apiFetch, API_BASE_URL } from "@/services/api";
+import { getAccessTokenAuto } from "@/services/authService";
 import { useEffect, useMemo, useState } from "react";
 
 type Company = { id: string; name: string };
@@ -45,7 +46,7 @@ export default function CreateContractPage() {
   const downloadTemplateExcel = async () => {
     if (!templateId || !excelTemplate) return;
     try {
-      const token = localStorage.getItem('jwt');
+      const token = await getAccessTokenAuto();
       const res = await fetch(`${API_BASE_URL}/api/contract-templates/${templateId}/files/${excelTemplate}`, { headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) } });
       if (!res.ok) throw new Error(`API error ${res.status}`);
       const blob = await res.blob();
@@ -60,8 +61,12 @@ export default function CreateContractPage() {
       a.click();
       a.remove();
       URL.revokeObjectURL(url);
-    } catch (e) {
-      setToast({ msg: 'Tải mẫu thất bại', type: 'error' });
+    } catch (e: any) {
+      const code = (e && (e as any).code) || '';
+      const msg = String(e?.message || e);
+      if (!(code === 'NETWORK_ABORTED' || msg.includes('NETWORK_ABORTED') || msg.includes('ERR_ABORTED'))) {
+        setToast({ msg: 'Tải mẫu thất bại', type: 'error' });
+      }
     }
   };
 
@@ -74,34 +79,12 @@ export default function CreateContractPage() {
       fd.append("templateId", templateId);
       fd.append("wordFileName", wordFile);
       if (excelUpload) fd.append("excel", excelUpload);
-      const token = localStorage.getItem("jwt");
-      const res = await fetch(`${API_BASE_URL}/api/contracts/init`, { method: "POST", headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) }, body: fd });
-      if (!res.ok) throw new Error(`API error ${res.status}`);
-      const data = await res.json();
+      const data = await apiFetch(`/api/contracts/init`, { method: "POST", body: fd });
       setToast({ msg: "Khởi tạo hợp đồng thành công", type: "success" });
-      if (data?.downloadUrl) {
-        try {
-          const token = localStorage.getItem("jwt");
-          const dres = await fetch(data.downloadUrl, { headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) } });
-          if (dres.ok) {
-            const blob = await dres.blob();
-            const cd = dres.headers.get('content-disposition') || '';
-            const m = /filename="?([^";]+)"?/i.exec(cd);
-            const fname = m ? m[1] : (displayName(wordFile) || 'contract.docx');
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = fname;
-            document.body.appendChild(a);
-            a.click();
-            a.remove();
-            URL.revokeObjectURL(url);
-          }
-        } catch {}
-      }
     } catch (e: any) {
+      const code = (e && (e as any).code) || "";
       const msg = String(e?.message || e);
-      if (msg.includes('ERR_ABORTED')) {
+      if (code === 'NETWORK_ABORTED' || msg.includes('NETWORK_ABORTED') || msg.includes('ERR_ABORTED')) {
         return;
       }
       setToast({ msg: "Khởi tạo hợp đồng thất bại", type: "error" });

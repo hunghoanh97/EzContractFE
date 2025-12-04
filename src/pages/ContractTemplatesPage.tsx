@@ -70,11 +70,10 @@ export default function ContractTemplatesPage() {
       }
       const id = created?.id || editId;
       if (id && (wordFile || excelFile)) {
-        const token = localStorage.getItem("jwt");
         const fd = new FormData();
         if (wordFile) fd.append("files", wordFile);
         if (excelFile) fd.append("files", excelFile);
-        const res = await fetch(`${API_BASE_URL}/api/contract-templates/${id}/files`, { method: "POST", headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) }, body: fd });
+        const res = await apiFetch(`/api/contract-templates/${id}/files`, { method: "POST", body: fd });
         try {
           if (res.ok) {
             const j = await res.json();
@@ -97,8 +96,7 @@ export default function ContractTemplatesPage() {
     if (!isEdit || !editId) return;
     setSaving(true);
     try {
-      const token = localStorage.getItem("jwt");
-      await fetch(`${API_BASE_URL}/api/contract-templates/${editId}`, { method: "DELETE", headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) } });
+      await apiFetch(`/api/contract-templates/${editId}`, { method: "DELETE" });
       const data = await apiFetch("/api/contract-templates");
       setItems(Array.isArray(data) ? data : []);
       setShowForm(false);
@@ -194,7 +192,7 @@ export default function ContractTemplatesPage() {
                     <span className="truncate mr-2">{displayName(fn)}</span>
                     <div className="flex items-center space-x-2">
                       <button className="text-gray-700" onClick={() => window.open(`${API_BASE_URL}/api/contract-templates/${editId}/files/${fn}`, '_blank')}>Tải file</button>
-                      <button className="text-red-600" onClick={async () => { try { const token = localStorage.getItem('jwt'); await fetch(`${API_BASE_URL}/api/contract-templates/${editId}/files/${fn}`, { method: 'DELETE', headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) } }); const data = await apiFetch('/api/contract-templates'); setItems(Array.isArray(data) ? data : []); } catch (e: any) { const msg = String(e?.message || e); if (!msg.includes('ERR_ABORTED')) console.error(e); } }}>Xóa</button>
+                      <button className="text-red-600" onClick={async () => { try { await apiFetch(`/api/contract-templates/${editId}/files/${fn}`, { method: 'DELETE' }); const data = await apiFetch('/api/contract-templates'); setItems(Array.isArray(data) ? data : []); } catch (e: any) { const code = (e && (e as any).code) || ""; const msg = String(e?.message || e); if (!(code === 'NETWORK_ABORTED' || msg.includes('NETWORK_ABORTED') || msg.includes('ERR_ABORTED'))) console.error(e); } }}>Xóa</button>
                     </div>
                   </div>
                 ))}
@@ -207,7 +205,7 @@ export default function ContractTemplatesPage() {
                     <span className="truncate mr-2">{displayName(fn)}</span>
                     <div className="flex items-center space-x-2">
                       <button className="text-gray-700" onClick={() => window.open(`${API_BASE_URL}/api/contract-templates/${editId}/files/${fn}`, '_blank')}>Tải file</button>
-                      <button className="text-red-600" onClick={async () => { try { const token = localStorage.getItem('jwt'); await fetch(`${API_BASE_URL}/api/contract-templates/${editId}/files/${fn}`, { method: 'DELETE', headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) } }); const data = await apiFetch('/api/contract-templates'); setItems(Array.isArray(data) ? data : []); } catch (e: any) { const msg = String(e?.message || e); if (!msg.includes('ERR_ABORTED')) console.error(e); } }}>Xóa</button>
+                      <button className="text-red-600" onClick={async () => { try { await apiFetch(`/api/contract-templates/${editId}/files/${fn}`, { method: 'DELETE' }); const data = await apiFetch('/api/contract-templates'); setItems(Array.isArray(data) ? data : []); } catch (e: any) { const code = (e && (e as any).code) || ""; const msg = String(e?.message || e); if (!(code === 'NETWORK_ABORTED' || msg.includes('NETWORK_ABORTED') || msg.includes('ERR_ABORTED'))) console.error(e); } }}>Xóa</button>
                     </div>
                   </div>
                 ))}

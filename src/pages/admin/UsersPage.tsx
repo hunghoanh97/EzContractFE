@@ -111,8 +111,7 @@ export default function UsersPage() {
     if (!isEdit || !editId) return;
     setSaving(true);
     try {
-      const token = localStorage.getItem("jwt");
-      await fetch(`${API_BASE_URL}/api/users/${editId}`, { method: "DELETE", headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) } });
+      await apiFetch(`/api/users/${editId}`, { method: "DELETE" });
       const data = await apiFetch("/api/users");
       setItems(Array.isArray(data) ? data : []);
       setShowForm(false);
