@@ -11,6 +11,7 @@ import ContractFieldsPage from "@/pages/ContractFieldsPage";
 import ContractFormInfoPage from "@/pages/ContractFormInfoPage";
 import ContractTemplatesPage from "@/pages/ContractTemplatesPage";
 import CreateContractPage from "@/pages/CreateContractPage";
+import PendingContractsPage from "@/pages/PendingContractsPage";
 import { isAuthenticatedSync } from "@/services/authService";
 
 function ProtectedRoute({ children }: { children: JSX.Element }) {
@@ -30,6 +31,7 @@ export default function App() {
         <Route path="/contract-form-info" element={<ProtectedRoute><ContractFormInfoPage /></ProtectedRoute>} />
         <Route path="/contract-templates" element={<ProtectedRoute><ContractTemplatesPage /></ProtectedRoute>} />
         <Route path="/create-contract" element={<ProtectedRoute><CreateContractPage /></ProtectedRoute>} />
+        <Route path="/contracts/pending" element={<ProtectedRoute><PendingContractsPage /></ProtectedRoute>} />
         <Route path="/login" element={<SystemLogin />} />
         <Route path="/system-login" element={<SystemLogin />} />
         <Route path="/admin/companies" element={<ProtectedRoute><CompaniesPage /></ProtectedRoute>} />

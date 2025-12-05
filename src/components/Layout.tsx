@@ -1,4 +1,6 @@
-import Sidebar from "@/components/Sidebar";
+import SidebarContainer from "@/components/sidebar/SidebarContainer";
+import MobileSidebar from "@/components/sidebar/MobileSidebar";
+import Header from "@/components/layout/Header";
 import { useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { logoutSystem, isAuthenticatedSync, getTokensSync } from "@/services/authService";
@@ -34,7 +36,10 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
-      <Sidebar />
+      <div className="hidden lg:block">
+        <SidebarContainer userRole={(userInfo.role || '').toUpperCase() === 'ADMIN' ? 'admin' : 'user'} />
+      </div>
+      <MobileSidebar userRole={(userInfo.role || '').toUpperCase() === 'ADMIN' ? 'admin' : 'user'} />
       <div className="flex-1">
         <header className="bg-white border-b">
           <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
@@ -54,6 +59,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             </div>
           </div>
         </header>
+        <Header userRole={(userInfo.role || '').toUpperCase() === 'ADMIN' ? 'admin' : 'user'} userName={userInfo.username || '-'} />
         <main className="max-w-7xl mx-auto px-6 py-6">{children}</main>
       </div>
     </div>
