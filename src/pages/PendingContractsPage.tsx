@@ -67,25 +67,30 @@ export default function PendingContractsPage() {
   const handleDownload = async (contract: PendingContract) => {
     try {
       setDownloading(contract.id);
-      const response = await apiFetch(contract.word_file_url, {
+      const token = (await import('@/services/authService')).getAccessTokenAuto ? await (await import('@/services/authService')).getAccessTokenAuto() : null;
+      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL || ''}/api/contracts/${contract.id}/download`, {
         headers: {
-          'Accept': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+          ...(token ? { Authorization: `Bearer ${token}` } : {})
         }
       });
-      
-      if (response instanceof Response && response.ok) {
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `${contract.contract_number}.docx`;
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
+      if (!res.ok) throw new Error(`API error ${res.status}`);
+      const blob = await res.blob();
+      const cd = res.headers.get('content-disposition') || '';
+      const m = /filename="?([^";]+)"?/i.exec(cd);
+      const fname = m ? m[1] : `${contract.contract_number}.docx`;
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fname;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (e: any) {
+      const msg = String(e?.message || e);
+      if (!(msg.includes('NETWORK_ABORTED') || msg.includes('ERR_ABORTED'))) {
+        console.error('Error downloading file:', e);
       }
-    } catch (error) {
-      console.error('Error downloading file:', error);
     } finally {
       setDownloading(null);
     }
