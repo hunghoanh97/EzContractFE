@@ -2,6 +2,10 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import tsconfigPaths from "vite-tsconfig-paths";
 import { traeBadgePlugin } from 'vite-plugin-trae-solo-badge';
+import { createRequire } from 'node:module';
+const require = createRequire(import.meta.url);
+let devLocatorInstalled = false;
+try { require.resolve('babel-plugin-react-dev-locator'); devLocatorInstalled = true; } catch {}
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -11,9 +15,7 @@ export default defineConfig({
   plugins: [
     react({
       babel: {
-        plugins: [
-          'react-dev-locator',
-        ],
+        plugins: devLocatorInstalled ? ['react-dev-locator'] : [],
       },
     }),
     traeBadgePlugin({

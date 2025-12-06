@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import Layout from '@/components/Layout';
 import ConfirmDialog from '@/components/ConfirmDialog';
+import WorkflowPopup from '@/components/WorkflowPopup';
 import { apiFetch } from '@/services/api';
 import { Download, Search, FileText, Calendar, User, Building, Trash } from 'lucide-react';
 
@@ -34,6 +35,7 @@ export default function PendingContractsPage() {
   const [downloading, setDownloading] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [confirmTarget, setConfirmTarget] = useState<PendingContract | null>(null);
+  const [workflowPopupFor, setWorkflowPopupFor] = useState<PendingContract | null>(null);
 
   const limit = 10;
 
@@ -322,7 +324,7 @@ export default function PendingContractsPage() {
                             Xóa
                           </button>
                           <button
-                            onClick={() => {/* TODO: Navigate to contract processing page */}}
+                            onClick={() => setWorkflowPopupFor(contract)}
                             className="inline-flex items-center px-3 py-1 border border-blue-300 rounded-md text-sm font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                           >
                             Xử lý
@@ -386,6 +388,11 @@ export default function PendingContractsPage() {
         cancelText="Hủy"
         onConfirm={confirmDelete}
         onCancel={() => setConfirmTarget(null)}
+      />
+      <WorkflowPopup
+        open={!!workflowPopupFor}
+        onClose={() => setWorkflowPopupFor(null)}
+        contractId={workflowPopupFor?.id || ''}
       />
     </Layout>
   );
