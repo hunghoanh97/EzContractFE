@@ -119,19 +119,19 @@ export default function WorkflowPopup({ open, onClose, contractId }: Props) {
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
-      <div className="bg-white rounded-md shadow-lg border" style={{ width: 800, height: 600 }}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-30">
+      <div className="bg-white rounded-md shadow-lg border w-full max-w-[800px] h-full md:h-[600px] flex flex-col">
         <div className="flex items-center justify-between p-3 border-b">
           <h3 className="font-semibold">Quản lý workflow DKKD</h3>
           <button onClick={onClose} className="px-2 py-1 text-sm bg-gray-100 hover:bg-gray-200 rounded">Đóng</button>
         </div>
-        <div className="p-4 h-[calc(600px-48px-48px)] overflow-auto">
+        <div className="p-4 flex-1 overflow-auto">
           <div className="space-y-3">
-            <div className="grid grid-cols-3 gap-3">
-              <div className="col-span-3">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div className="md:col-span-3">
                 <div className="text-sm text-gray-600">Đang thiết lập đăng nhập headful và tự động khởi tạo workflow</div>
               </div>
-              <div className="col-span-3">
+              <div className="md:col-span-3">
                 <button
                   onClick={() => pollStatusAndFinish()}
                   disabled={!flowId || !!sessionId || loading}
@@ -144,7 +144,7 @@ export default function WorkflowPopup({ open, onClose, contractId }: Props) {
             {error && <p className="text-sm text-red-600">{error}</p>}
             <div className="border rounded">
               <div className="p-2 border-b"><span className="font-medium">Nhật ký</span></div>
-              <div className="p-2 space-y-1 h-64 overflow-auto">
+              <div className="p-2 space-y-1 h-64 md:h-64 overflow-auto">
                 {logs.length === 0 && <p className="text-sm text-gray-500">Chưa có sự kiện</p>}
                 {logs.map((l, idx) => (
                   <p key={idx} className="text-sm text-gray-700">{l}</p>
