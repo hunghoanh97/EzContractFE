@@ -6,9 +6,6 @@ import { useSidebarStore } from '@/stores/sidebarStore';
 const contractItems = [
   { path: '/', label: 'Trang chủ', icon: Home },
   { path: '/contracts/pending', label: 'Hợp đồng chờ xử lý', icon: FileText },
-  { path: '/contract-types', label: 'Loại hợp đồng', icon: Settings },
-  { path: '/contract-fields', label: 'Trường hợp đồng', icon: Wrench },
-  { path: '/contract-form-info', label: 'Form thông tin trong mẫu', icon: FileText },
   { path: '/contract-templates', label: 'Mẫu hợp đồng', icon: FileText },
   { path: '/create-contract', label: 'Tạo hợp đồng', icon: PlusCircle },
   { path: '/workflow', label: 'Tiến độ workflow', icon: GitBranch },

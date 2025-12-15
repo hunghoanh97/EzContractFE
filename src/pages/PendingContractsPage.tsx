@@ -11,7 +11,7 @@ interface PendingContract {
   creator_name: string;
   creator_email: string;
   contract_number: string;
-  word_file_url: string;
+  file_id: string;
   created_at: string;
   status: string;
 }
@@ -66,11 +66,12 @@ export default function PendingContractsPage() {
     fetchPendingContracts();
   }, [currentPage, searchTerm, sortBy, sortOrder]);
 
-  const handleDownload = async (contract: PendingContract) => {
+  const handleDownload = async (contract: PendingContract, fileName?: string) => {
     try {
-      setDownloading(contract.id);
+      setDownloading(contract.id + (fileName || ''));
       const token = (await import('@/services/authService')).getAccessTokenAuto ? await (await import('@/services/authService')).getAccessTokenAuto() : null;
-      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL || ''}/api/contracts/${contract.id}/download`, {
+      const urlParams = fileName ? `?file=${encodeURIComponent(fileName)}` : '';
+      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL || ''}/api/contracts/${contract.id}/download${urlParams}`, {
         headers: {
           ...(token ? { Authorization: `Bearer ${token}` } : {})
         }
@@ -79,7 +80,10 @@ export default function PendingContractsPage() {
       const blob = await res.blob();
       const cd = res.headers.get('content-disposition') || '';
       const m = /filename="?([^";]+)"?/i.exec(cd);
-      const fname = m ? m[1] : `${contract.contract_number}.docx`;
+      
+      let fname = m ? m[1] : (fileName || (contract.file_id || 'document.docx'));
+      if (!fileName && !m && contract.file_id && contract.file_id.trim().startsWith('[')) fname = `contract_${contract.contract_number}.zip`;
+
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -98,6 +102,18 @@ export default function PendingContractsPage() {
     }
   };
 
+  const parseFiles = (fileId: string | null | undefined) => {
+    if (!fileId) return [];
+    try {
+        if (fileId.trim().startsWith('[')) {
+            const parsed = JSON.parse(fileId);
+            if (Array.isArray(parsed)) return parsed.filter(x => x && typeof x === 'string');
+        }
+    } catch {}
+    return [fileId];
+  };
+
+
   const handleDelete = (contract: PendingContract) => {
     if ((contract.status || '').toLowerCase() !== 'draft') return;
     setConfirmTarget(contract);
@@ -110,6 +126,7 @@ export default function PendingContractsPage() {
       await apiFetch(`/api/contracts/${confirmTarget.id}`, { method: 'DELETE' });
       await fetchPendingContracts();
     } catch (e: any) {
+      // Ignore abort errors which might happen on unmount or network blips
       const code = (e && (e as any).code) || '';
       const msg = String(e?.message || e);
       if (!(code === 'NETWORK_ABORTED' || msg.includes('NETWORK_ABORTED') || msg.includes('ERR_ABORTED'))) {
@@ -204,6 +221,9 @@ export default function PendingContractsPage() {
                     </button>
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    File đính kèm
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     <button
                       onClick={() => handleSort('company')}
                       className="flex items-center space-x-1 hover:text-gray-700"
@@ -268,6 +288,24 @@ export default function PendingContractsPage() {
                         <div className="text-sm font-medium text-gray-900">{contract.contract_number}</div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
+                         <div className="flex flex-col space-y-1">
+                            {parseFiles(contract.file_id).map((f, i) => (
+                                <div key={i} className="flex items-center space-x-2">
+                                    <span className="text-sm text-gray-600 truncate max-w-[150px]" title={f}>
+                                        {f && f.includes('_') ? f.substring(f.indexOf('_') + 1) : f}
+                                    </span>
+                                    <button 
+                                        onClick={() => handleDownload(contract, f)}
+                                        disabled={downloading === contract.id + f}
+                                        className="text-blue-600 hover:text-blue-800 text-xs"
+                                    >
+                                        {downloading === contract.id + f ? '...' : '[Tải]'}
+                                    </button>
+                                </div>
+                            ))}
+                         </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
                           <Building className="w-4 h-4 text-gray-400 mr-2" />
                           <div className="text-sm text-gray-900">{contract.company_name}</div>
@@ -309,7 +347,7 @@ export default function PendingContractsPage() {
                             ) : (
                               <Download className="w-4 h-4 mr-1" />
                             )}
-                            Tải file
+                            {parseFiles(contract.file_id).length > 1 ? 'Tải Zip' : 'Tải file'}
                           </button>
                           <button
                             onClick={() => handleDelete(contract)}

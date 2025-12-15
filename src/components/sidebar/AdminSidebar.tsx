@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, Building2, Users, Shield, Menu } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Building2, Users, Shield, Menu, Settings, Wrench, FileText } from 'lucide-react';
 import { AdminSidebarProps } from '@/types/sidebar';
 import { useSidebarStore } from '@/stores/sidebarStore';
 
@@ -7,6 +7,9 @@ const adminItems = [
   { path: '/admin/companies', label: 'Công ty', icon: Building2 },
   { path: '/admin/users', label: 'Người dùng', icon: Users },
   { path: '/admin/roles', label: 'Vai trò', icon: Shield },
+  { path: '/contract-types', label: 'Loại hợp đồng', icon: Settings },
+  { path: '/contract-fields', label: 'Trường hợp đồng', icon: Wrench },
+  { path: '/contract-form-info', label: 'Form thông tin trong mẫu', icon: FileText },
 ];
 
 export default function AdminSidebar({ isCollapsed, onToggle, className = '' }: AdminSidebarProps) {
