@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { dkkdAuthService, DkkdInitState, DkkdLoginRequest } from '@/services/dkkdAuthService';
+import { API_BASE_URL } from '@/services/api';
 
 declare global {
   interface Window {
@@ -176,7 +177,7 @@ export default function DkkdLogin() {
       if (response.success) {
         // Cross-check credentials against DKKD by using workflow LOGIN_STEP
         try {
-          const initResp = await fetch('http://localhost:5364/api/BusinessRegistrationWorkflow/initialize', {
+          const initResp = await fetch(`${API_BASE_URL}/api/BusinessRegistrationWorkflow/initialize`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ sessionId: response.authToken })
@@ -193,7 +194,7 @@ export default function DkkdLogin() {
             },
             actionName: 'ctl00$C$W1$btnStep1_Login'
           };
-          const verifyResp = await fetch('http://localhost:5364/api/BusinessRegistrationWorkflow/section/fill', {
+          const verifyResp = await fetch(`${API_BASE_URL}/api/BusinessRegistrationWorkflow/section/fill`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(verifyPayload)

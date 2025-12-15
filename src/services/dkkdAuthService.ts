@@ -19,11 +19,11 @@ export interface DkkdLoginResponse {
   authToken?: string;
 }
 
-const API_BASE_URL = 'http://localhost:5364/api';
+import { API_BASE_URL } from '@/services/api';
 
 class DkkdAuthService {
   async initializeLogin(): Promise<DkkdInitState> {
-    const response = await fetch(`${API_BASE_URL}/dkkdauth/initialize`);
+    const response = await fetch(`${API_BASE_URL}/api/dkkdauth/initialize`);
     if (!response.ok) {
       throw new Error('Failed to initialize login');
     }
@@ -39,7 +39,7 @@ class DkkdAuthService {
       sessionId: request.sessionId // Backend expects SessionId but we'll send as sessionId and let ASP.NET handle it
     };
     
-    const response = await fetch(`${API_BASE_URL}/dkkdauth/login`, {
+    const response = await fetch(`${API_BASE_URL}/api/dkkdauth/login`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -55,7 +55,7 @@ class DkkdAuthService {
   }
 
   async logout(sessionId: string): Promise<void> {
-    const response = await fetch(`${API_BASE_URL}/dkkdauth/logout`, {
+    const response = await fetch(`${API_BASE_URL}/api/dkkdauth/logout`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -69,7 +69,7 @@ class DkkdAuthService {
   }
 
   async validateSession(sessionId: string): Promise<boolean> {
-    const response = await fetch(`${API_BASE_URL}/dkkdauth/session/${sessionId}`);
+    const response = await fetch(`${API_BASE_URL}/api/dkkdauth/session/${sessionId}`);
     if (!response.ok) {
       return false;
     }
