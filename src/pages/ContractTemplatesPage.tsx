@@ -20,6 +20,76 @@ export default function ContractTemplatesPage() {
   const [form, setForm] = useState<{ name: string; description: string; status: string; contractTypeId: string; contractFormDataId: string }>({ name: "", description: "", status: "ACTIVE", contractTypeId: "", contractFormDataId: "" });
   const [wordFile, setWordFile] = useState<File | null>(null);
   const [excelFile, setExcelFile] = useState<File | null>(null);
+  // Multi-file upload support
+  type FileItem = {
+    id: string;
+    file: File;
+    name: string;
+    size: number;
+    status: 'queued' | 'uploading' | 'uploaded' | 'error' | 'canceled';
+    progress: number; // 0..100
+    xhr?: XMLHttpRequest | null;
+    serverFileName?: string | null;
+    errorMsg?: string | null;
+  };
+  const [fileItems, setFileItems] = useState<FileItem[]>([]);
+  const maxFileSize = 10 * 1024 * 1024; // 10MB
+  const maxParallelUploads = 3;
+  const [activeUploads, setActiveUploads] = useState(0);
+
+  // helpers for queue management
+  const removeQueued = (id: string) => setFileItems(prev => prev.filter(p => p.id !== id));
+
+  const cancelUpload = (id: string) => {
+    setFileItems(prev => prev.map(p => {
+      if (p.id === id) {
+        try { p.xhr?.abort(); } catch {}
+        return { ...p, status: 'canceled', progress: 0 };
+      }
+      return p;
+    }));
+  };
+
+  const cancelAll = () => {
+    setFileItems(prev => { prev.forEach(p => { try { p.xhr?.abort(); } catch {} }); return []; });
+  };
+
+  const startAll = (templateId: string) => {
+    for (const it of fileItems.filter(f => f.status === 'queued')) startUpload(templateId, it.id);
+  };
+
+  const startUpload = (templateId: string, fileItemId: string) => {
+    setFileItems(prev => prev.map(p => p.id === fileItemId ? { ...p, status: 'uploading' } : p));
+    const fi = fileItems.find(f => f.id === fileItemId);
+    if (!fi) return;
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', `${API_BASE_URL}/api/contract-templates/${templateId}/files`);
+    xhr.upload.onprogress = (ev) => {
+      if (ev.lengthComputable) {
+        const percent = Math.round((ev.loaded / ev.total) * 100);
+        setFileItems(prev => prev.map(p => p.id === fileItemId ? { ...p, progress: percent } : p));
+      }
+    };
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        setFileItems(prev => prev.map(p => p.id === fileItemId ? { ...p, status: 'uploaded', progress: 100, serverFileName: JSON.parse(xhr.responseText)?.template?.fileNames?.[0] || null } : p));
+      } else {
+        setFileItems(prev => prev.map(p => p.id === fileItemId ? { ...p, status: 'error', errorMsg: `Server error ${xhr.status}` } : p));
+      }
+    };
+    xhr.onerror = () => {
+      setFileItems(prev => prev.map(p => p.id === fileItemId ? { ...p, status: 'error', errorMsg: 'Network error' } : p));
+    };
+    xhr.onabort = () => {
+      setFileItems(prev => prev.map(p => p.id === fileItemId ? { ...p, status: 'canceled', errorMsg: 'Canceled' } : p));
+    };
+    const fd = new FormData();
+    fd.append('files', fi.file);
+    // attach token if available (handled by apiFetch normally)
+    xhr.send(fd);
+    // store xhr ref
+    setFileItems(prev => prev.map(p => p.id === fileItemId ? { ...p, xhr } : p));
+  };
   const [saving, setSaving] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [toast, setToast] = useState<{ msg: string; type: "success" | "error" } | null>(null);
@@ -69,19 +139,26 @@ export default function ContractTemplatesPage() {
         created = await apiFetch(`/api/contract-templates`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(form) });
       }
       const id = created?.id || editId;
-      if (id && (wordFile || excelFile)) {
-        const fd = new FormData();
-        if (wordFile) fd.append("files", wordFile);
-        if (excelFile) fd.append("files", excelFile);
-        const res = await apiFetch(`/api/contract-templates/${id}/files`, { method: "POST", body: fd });
-        try {
-          if (res.ok) {
-            const j = await res.json();
-            if (j?.import?.addedFields) {
-              setToast({ msg: `Đã import từ Excel: thêm ${j.import.addedFields} trường`, type: "success" });
-            }
+      // If there are queued client files for a new template, upload them now
+      if (id) {
+        // also handle legacy single files
+        const fdLegacy = new FormData();
+        if (wordFile) fdLegacy.append("files", wordFile);
+        if (excelFile) fdLegacy.append("files", excelFile);
+        if (fdLegacy.has("files")) {
+          try {
+            await apiFetch(`/api/contract-templates/${id}/files`, { method: "POST", body: fdLegacy });
+          } catch (e) {
+            console.error('Legacy upload failed', e);
           }
-        } catch {}
+        }
+
+        // start uploads for queued files (files selected before template creation)
+        const queued = fileItems.filter(f => f.status === 'queued');
+        if (queued.length > 0) {
+          // kick off uploads (they will observe concurrency limit)
+          for (const fi of queued) startUpload(id, fi.id);
+        }
       }
       const data = await apiFetch("/api/contract-templates");
       setItems(Array.isArray(data) ? data : []);
@@ -186,7 +263,27 @@ export default function ContractTemplatesPage() {
               <textarea className="border rounded px-3 py-2 w-full md:col-span-2" rows={3} placeholder="Mô tả" value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} />
               <div className="md:col-span-1">
                 <label className="text-sm text-gray-700">File Word</label>
-                <input type="file" accept=".doc,.docx" className="border rounded px-3 py-2 w-full" onChange={e => setWordFile(e.target.files?.[0] || null)} />
+                <input
+                  type="file"
+                  multiple
+                  accept=".doc,.docx,.pdf,.jpg,.jpeg,.png"
+                  className="border rounded px-3 py-2 w-full"
+                  onChange={e => {
+                    const files = Array.from(e.target.files || []);
+                    const newItems: FileItem[] = files.map((f) => ({
+                      id: `${Date.now()}_${f.name}_${Math.random().toString(36).slice(2)}`,
+                      file: f,
+                      name: f.name,
+                      size: f.size,
+                      status: f.size > maxFileSize ? 'error' : 'queued',
+                      progress: 0,
+                      xhr: null,
+                      serverFileName: null,
+                      errorMsg: f.size > maxFileSize ? 'File vượt quá 10MB' : null,
+                    }));
+                    setFileItems(prev => [...newItems, ...prev]);
+                  }}
+                />
                 {isEdit && items.find(x => x.id === editId)?.fileNames?.filter(fn => fn.toLowerCase().endsWith('.doc') || fn.toLowerCase().endsWith('.docx')).map(fn => (
                   <div key={fn} className="flex items-center justify-between text-sm mt-2 border rounded px-2 py-1">
                     <span className="truncate mr-2">{displayName(fn)}</span>
@@ -199,7 +296,27 @@ export default function ContractTemplatesPage() {
               </div>
               <div className="md:col-span-1">
                 <label className="text-sm text-gray-700">File Excel</label>
-                <input type="file" accept=".xls,.xlsx" className="border rounded px-3 py-2 w-full" onChange={e => setExcelFile(e.target.files?.[0] || null)} />
+                <input
+                  type="file"
+                  multiple
+                  accept=".xls,.xlsx"
+                  className="border rounded px-3 py-2 w-full"
+                  onChange={e => {
+                    const files = Array.from(e.target.files || []);
+                    const newItems: FileItem[] = files.map((f) => ({
+                      id: `${Date.now()}_${f.name}_${Math.random().toString(36).slice(2)}`,
+                      file: f,
+                      name: f.name,
+                      size: f.size,
+                      status: f.size > maxFileSize ? 'error' : 'queued',
+                      progress: 0,
+                      xhr: null,
+                      serverFileName: null,
+                      errorMsg: f.size > maxFileSize ? 'File vượt quá 10MB' : null,
+                    }));
+                    setFileItems(prev => [...newItems, ...prev]);
+                  }}
+                />
                 {isEdit && items.find(x => x.id === editId)?.fileNames?.filter(fn => fn.toLowerCase().endsWith('.xls') || fn.toLowerCase().endsWith('.xlsx')).map(fn => (
                   <div key={fn} className="flex items-center justify-between text-sm mt-2 border rounded px-2 py-1">
                     <span className="truncate mr-2">{displayName(fn)}</span>
@@ -209,7 +326,40 @@ export default function ContractTemplatesPage() {
                     </div>
                   </div>
                 ))}
-                
+                {/* Upload queue UI */}
+                <div className="md:col-span-2 mt-2 space-y-2">
+                  {fileItems.map(it => (
+                    <div key={it.id} className="flex items-center justify-between border rounded px-3 py-2 text-sm">
+                      <div className="flex-1 mr-3">
+                        <div className="font-medium truncate">{it.name}</div>
+                        <div className="text-gray-500">{(it.size/1024/1024).toFixed(2)} MB • {it.status}</div>
+                        <div className="h-2 bg-gray-200 rounded mt-1">
+                          <div className={`h-2 rounded ${it.status==='error'?'bg-red-500':'bg-blue-600'}`} style={{ width: `${it.progress || (it.status==='uploaded'?100:0)}%` }} />
+                        </div>
+                        {it.errorMsg && <div className="text-red-600 mt-1">{it.errorMsg}</div>}
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        {it.status==='queued' && (
+                          <button className="px-2 py-1 border rounded" onClick={() => { if (isEdit && editId) startUpload(editId, it.id); }}>
+                            Tải lên
+                          </button>
+                        )}
+                        {(it.status==='uploading') && (
+                          <button className="px-2 py-1 border rounded" onClick={() => cancelUpload(it.id)}>Hủy</button>
+                        )}
+                        {(it.status==='queued' || it.status==='uploaded' || it.status==='error') && (
+                          <button className="px-2 py-1 border rounded" onClick={() => removeQueued(it.id)}>Xóa</button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                  {isEdit && editId && fileItems.some(f=>f.status==='queued') && (
+                    <div className="flex items-center space-x-2">
+                      <button className="px-3 py-2 rounded-md bg-blue-600 text-white" onClick={() => startAll(editId)}>Tải tất cả</button>
+                      <button className="px-3 py-2 rounded-md border" onClick={cancelAll}>Hủy tất cả</button>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
             <div className="p-4 border-t flex items-center justify-end space-x-3">
